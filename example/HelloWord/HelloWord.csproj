@@ -7,8 +7,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Rebus.Redis.Transport.CSRedis\Rebus.Redis.Transport.FreeRedis.csproj" />
-  </ItemGroup>
-
 </Project>
