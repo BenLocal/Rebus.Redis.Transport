@@ -2,11 +2,8 @@
 using Rebus.Activation;
 using Rebus.Config;
 using Rebus.Handlers;
-using Rebus.Redis.Transport.CSRedis;
 using Rebus.Routing.TypeBased;
-
-Console.WriteLine("Hello, World!");
-
+using Rebus.Redis.Transport.FreeRedis;
 
 using var activator = new BuiltinHandlerActivator();
 using var timer = new System.Timers.Timer();

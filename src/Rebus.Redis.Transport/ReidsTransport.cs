@@ -16,8 +16,7 @@ namespace Rebus.Redis.Transport
 
         private readonly string consumerGroup = "aaa";
         private readonly Channel<TransportMessage> _receiveedChannel;
-
-        private Task? receiveTask = null;
+        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
         public ReidsTransport(string inputQueueName,
             IRedisManager redisManager,
@@ -27,6 +26,8 @@ namespace Rebus.Redis.Transport
             _redisManager = redisManager;
             _options = options;
             _receiveedChannel = Channel.CreateUnbounded<TransportMessage>(new UnboundedChannelOptions() { SingleReader = true, SingleWriter = true });
+
+            Receiving(_cts.Token);
         }
 
         public override void CreateQueue(string address)
@@ -36,11 +37,6 @@ namespace Rebus.Redis.Transport
 
         public override async Task<TransportMessage> Receive(ITransactionContext context, CancellationToken cancellationToken)
         {
-            if (receiveTask == null)
-            {
-                receiveTask = Receiving(cancellationToken);
-            }
-
             if (await _receiveedChannel.Reader.WaitToReadAsync(cancellationToken))
             {
                 if (_receiveedChannel.Reader.TryRead(out var message))
@@ -69,30 +65,27 @@ namespace Rebus.Redis.Transport
             await _redisManager.PublishAsync(_inputQueueName, messages);
         }
 
-        private Task Receiving(CancellationToken cancellationToken)
+        private void Receiving(CancellationToken cancellationToken)
         {
             // reclaim Pending Messages
             Task.Factory.StartNew(async () =>
             {
                 try
                 {
-                    var pendMessages = _redisManager.GetPendingMessagesAsync(_inputQueueName,
+                    var pendingMessages = _redisManager.GetPendingMessagesAsync(_inputQueueName,
                             consumerGroup, cancellationToken);
 
-                    await ExecPendMessagesInner(pendMessages);
+                    ExecPendingMessagesInner(pendingMessages);
 
                     while (!cancellationToken.IsCancellationRequested)
                     {
                         await Task.Delay(_options.RedeliverInterval);
 
                         //first time, we want to read our pending messages, in case we crashed and are recovering.
-                        pendMessages = _redisManager.GetPendingMessagesAsync(_inputQueueName,
+                        pendingMessages = _redisManager.GetPendingMessagesAsync(_inputQueueName,
                                 consumerGroup, cancellationToken);
 
-                        if (pendMessages == null)
-                        {
-                            continue;
-                        }
+                        ExecPendingMessagesInner(pendingMessages);
                     }
                 }
                 catch (OperationCanceledException)
@@ -101,7 +94,7 @@ namespace Rebus.Redis.Transport
                 }
             }, cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
-            return Task.Factory.StartNew(async () =>
+            Task.Factory.StartNew(async () =>
             {
                 try
                 {
@@ -132,9 +125,17 @@ namespace Rebus.Redis.Transport
             }, cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);  
         }
 
-        private Task ExecPendMessagesInner(IEnumerable<PendingMessage> pendMessages)
-        { 
-            
+        private void ExecPendingMessagesInner(IEnumerable<PendingMessage> pendMessages)
+        {
+            if (pendMessages == null)
+            {
+                return;
+            }
+
+            foreach (var pend in pendMessages)
+            {
+                Console.WriteLine($"Pending message is : {pend.Id}");
+            }
         }
     }
 }

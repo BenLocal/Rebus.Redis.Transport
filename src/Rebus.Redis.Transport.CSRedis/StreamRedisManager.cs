@@ -1,22 +1,20 @@
-﻿using CSRedis;
-using Newtonsoft.Json;
+﻿using FreeRedis;
 using Rebus.Messages;
-using System.Linq;
 
-namespace Rebus.Redis.Transport.CSRedis
+namespace Rebus.Redis.Transport.FreeRedis
 {
     /// <summary>
     /// https://redis.io/topics/streams-intro
     /// </summary>
     public class StreamRedisManager : IRedisManager
     {
-        private readonly CSRedisClient _redisClient;
+        private readonly RedisClient _redisClient;
         private readonly RedisOptions _options;
 
         public StreamRedisManager(RedisOptions options)
         {
             _options = options;
-            _redisClient = new CSRedisClient(options.ConnectionString);
+            _redisClient = new RedisClient(options.ConnectionString);
         }
 
         public void Ack(string key, string consumerGroup, string messageId)
@@ -39,8 +37,9 @@ namespace Rebus.Redis.Transport.CSRedis
             {
                 _redisClient.XGroupCreate(key, consumerGroup, "0", MkStream: true);
             }
-            catch (RedisException ex)
+            catch (Exception ex)
             {
+                // TODO
                 if (ex.Message.Contains("BUSYGROUP"))
                 {
                     return;
@@ -58,25 +57,28 @@ namespace Rebus.Redis.Transport.CSRedis
             // If the ID is any other valid numerical ID, then the command will let us access our history of pending messages.
             // That is, the set of messages that were delivered to this specified consumer (identified by the provided name), and
             // never acknowledged so far with XACK.
-            var streamsEntries = _redisClient.XReadGroup(consumerGroup, consumerGroup,
-                                _options.StreamEntriesCount,
-                              pollDelay.Milliseconds, (key, ">"));
+            var streamsEntries = _redisClient.XReadGroup(consumerGroup,
+                consumerGroup,
+                _options.StreamEntriesCount,
+                pollDelay.Seconds,
+                false,
+                key, ">");
 
             if (streamsEntries == null)
             {
                 yield break;
             }
 
-            foreach ((var k, var data) in streamsEntries)
+            foreach (var streamsEntry in streamsEntries)
             {
-                if (data == null)
+                if (streamsEntry == null)
                 {
                     continue;
                 }
 
-                foreach ((var id, var items) in data)
+                foreach (var item in streamsEntry.entries)
                 {
-                    var message = MessageTransform.ToMessage(k, id, items);
+                    var message = MessageTransform.ToMessage(item);
                     if (message == null)
                     {
                         continue;
@@ -89,6 +91,9 @@ namespace Rebus.Redis.Transport.CSRedis
 
         public IEnumerable<PendingMessage> GetPendingMessagesAsync(string key, string consumerGroup, CancellationToken token)
         {
+            // XPENDING <key> <groupname> [[IDLE <min-idle-time>] <start-id> <end-id> <count> [<consumer-name>]]
+            // By providing a start and end ID (that can be just - and + as in XRANGE) and a count to control the amount of
+            // information returned by the command, we are able to know more about the pending messages. 
             var streamsEntries = _redisClient.XPending(key,
                     consumerGroup,
                     start: "-",
@@ -101,24 +106,24 @@ namespace Rebus.Redis.Transport.CSRedis
                 yield break;
             }
 
-            foreach ((var id, var consumer, var idle, var transferTimes) in streamsEntries)
+            foreach (var item in streamsEntries)
             {
                 yield return new PendingMessage()
                 {
-                    Id = id,
-                    Consumer = consumer,
-                    Idle = idle,
-                    TransferTimes = transferTimes,
+                    Id = item.id,
+                    Consumer = item.consumer,
+                    Idle = item.idle,
+                    DeliveredTimes = item.deliveredTimes,
                 };
             }
         }
 
         public Task PublishAsync(string key, IEnumerable<TransportMessage> messages)
         {
-            var values = messages.Select(x => MessageTransform.AsData(x).Select(x => (x.Key, x.Value)).FirstOrDefault());
-
-            _redisClient.XAdd(key, values.ToArray());
-
+            foreach (var msg in messages)
+            {
+                _redisClient.XAdd(key, MessageTransform.AsData(msg));
+            }
             return Task.CompletedTask;
         }
     }

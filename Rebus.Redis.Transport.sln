@@ -7,9 +7,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "example", "example", "{89C5
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rebus.Redis.Transport", "src\Rebus.Redis.Transport\Rebus.Redis.Transport.csproj", "{1AC0EC92-6257-400E-A3B5-FBD051AB1A00}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rebus.Redis.Transport.CSRedis", "src\Rebus.Redis.Transport.CSRedis\Rebus.Redis.Transport.CSRedis.csproj", "{41AC140F-69D7-472F-B5FF-05325F32AAE0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rebus.Redis.Transport.FreeRedis", "src\Rebus.Redis.Transport.CSRedis\Rebus.Redis.Transport.FreeRedis.csproj", "{41AC140F-69D7-472F-B5FF-05325F32AAE0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWord", "example\HelloWord\HelloWord.csproj", "{7E44B3EE-5FEB-4E23-833A-4D7DC2E6ADF3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HelloWord", "example\HelloWord\HelloWord.csproj", "{7E44B3EE-5FEB-4E23-833A-4D7DC2E6ADF3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

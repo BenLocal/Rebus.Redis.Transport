@@ -12,7 +12,7 @@ namespace Rebus.Redis.Transport
 
         public string? Consumer { get; set; }
 
-        public long TransferTimes { get; set; }
+        public long DeliveredTimes { get; set; }
 
         public long Idle { get; set; }
     }

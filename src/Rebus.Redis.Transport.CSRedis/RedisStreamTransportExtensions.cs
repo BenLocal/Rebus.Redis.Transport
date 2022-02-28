@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Rebus.Redis.Transport.CSRedis
+namespace Rebus.Redis.Transport.FreeRedis
 {
     public static class RedisStreamTransportExtensions
     {
