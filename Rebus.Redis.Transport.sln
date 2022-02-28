@@ -3,9 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rebus.Redis.Transport", "Rebus.Redis.Transport\Rebus.Redis.Transport.csproj", "{6A7D4DD0-5DCE-4BE2-85BD-838040FEFD92}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "example", "example", "{89C59433-B2D9-4E3A-96D5-DA8E2DD676E6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rebus.Redis.Transport.CSRedis", "Rebus.Redis.Transport.CSRedis\Rebus.Redis.Transport.CSRedis.csproj", "{21FBACF2-8F4A-4017-9E9C-E305FE02F271}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rebus.Redis.Transport", "src\Rebus.Redis.Transport\Rebus.Redis.Transport.csproj", "{1AC0EC92-6257-400E-A3B5-FBD051AB1A00}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rebus.Redis.Transport.CSRedis", "src\Rebus.Redis.Transport.CSRedis\Rebus.Redis.Transport.CSRedis.csproj", "{41AC140F-69D7-472F-B5FF-05325F32AAE0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWord", "example\HelloWord\HelloWord.csproj", "{7E44B3EE-5FEB-4E23-833A-4D7DC2E6ADF3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,17 +17,24 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{6A7D4DD0-5DCE-4BE2-85BD-838040FEFD92}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6A7D4DD0-5DCE-4BE2-85BD-838040FEFD92}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6A7D4DD0-5DCE-4BE2-85BD-838040FEFD92}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6A7D4DD0-5DCE-4BE2-85BD-838040FEFD92}.Release|Any CPU.Build.0 = Release|Any CPU
-		{21FBACF2-8F4A-4017-9E9C-E305FE02F271}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{21FBACF2-8F4A-4017-9E9C-E305FE02F271}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{21FBACF2-8F4A-4017-9E9C-E305FE02F271}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{21FBACF2-8F4A-4017-9E9C-E305FE02F271}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1AC0EC92-6257-400E-A3B5-FBD051AB1A00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1AC0EC92-6257-400E-A3B5-FBD051AB1A00}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1AC0EC92-6257-400E-A3B5-FBD051AB1A00}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1AC0EC92-6257-400E-A3B5-FBD051AB1A00}.Release|Any CPU.Build.0 = Release|Any CPU
+		{41AC140F-69D7-472F-B5FF-05325F32AAE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{41AC140F-69D7-472F-B5FF-05325F32AAE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{41AC140F-69D7-472F-B5FF-05325F32AAE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{41AC140F-69D7-472F-B5FF-05325F32AAE0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E44B3EE-5FEB-4E23-833A-4D7DC2E6ADF3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E44B3EE-5FEB-4E23-833A-4D7DC2E6ADF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E44B3EE-5FEB-4E23-833A-4D7DC2E6ADF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E44B3EE-5FEB-4E23-833A-4D7DC2E6ADF3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7E44B3EE-5FEB-4E23-833A-4D7DC2E6ADF3} = {89C59433-B2D9-4E3A-96D5-DA8E2DD676E6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A5DD5D98-C07E-4C89-9F78-4AFCF2F96F9B}

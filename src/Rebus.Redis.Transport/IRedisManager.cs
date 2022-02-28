@@ -13,11 +13,11 @@ namespace Rebus.Redis.Transport
 
         Task PublishAsync(string key, IEnumerable<TransportMessage> messages);
 
-        IEnumerable<TransportMessage> PollStreamsLatestMessagesAsync(string key, string consumerGroup,
+        IEnumerable<TransportMessage> GetNewMessagesAsync(string key, string consumerGroup,
             TimeSpan pollDelay, CancellationToken token);
 
-        IEnumerable<TransportMessage> PollStreamsPendingMessagesAsync(string key, string consumerGroup,
-            TimeSpan pollDelay, CancellationToken token);
+        IEnumerable<PendingMessage> GetPendingMessagesAsync(string key, string consumerGroup,
+            CancellationToken token);
 
         void Ack(string key, string consumerGroup, string messageId);
     }

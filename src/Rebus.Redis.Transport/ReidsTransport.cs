@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Rebus.Config;
 using Rebus.Messages;
 using Rebus.Transport;
 using System;
@@ -11,6 +12,7 @@ namespace Rebus.Redis.Transport
     {
         private readonly string _inputQueueName;
         private readonly IRedisManager _redisManager;
+        private readonly RedisOptions _options;
 
         private readonly string consumerGroup = "aaa";
         private readonly Channel<TransportMessage> _receiveedChannel;
@@ -18,10 +20,12 @@ namespace Rebus.Redis.Transport
         private Task? receiveTask = null;
 
         public ReidsTransport(string inputQueueName,
-            IRedisManager redisManager) : base(inputQueueName)
+            IRedisManager redisManager,
+            RedisOptions options) : base(inputQueueName)
         {
             _inputQueueName = inputQueueName;
             _redisManager = redisManager;
+            _options = options;
             _receiveedChannel = Channel.CreateUnbounded<TransportMessage>(new UnboundedChannelOptions() { SingleReader = true, SingleWriter = true });
         }
 
@@ -44,7 +48,10 @@ namespace Rebus.Redis.Transport
                     // ack
                     context.OnCommitted(ctx =>
                     {
-                        _redisManager.Ack(_inputQueueName, consumerGroup, "TODO");
+                        if (message.Headers.TryGetValue("redis-id", out var id))
+                        {
+                            _redisManager.Ack(_inputQueueName, consumerGroup, id);
+                        }
 
                         return Task.CompletedTask;
                     });
@@ -64,21 +71,45 @@ namespace Rebus.Redis.Transport
 
         private Task Receiving(CancellationToken cancellationToken)
         {
+            // reclaim Pending Messages
+            Task.Factory.StartNew(async () =>
+            {
+                try
+                {
+                    var pendMessages = _redisManager.GetPendingMessagesAsync(_inputQueueName,
+                            consumerGroup, cancellationToken);
+
+                    await ExecPendMessagesInner(pendMessages);
+
+                    while (!cancellationToken.IsCancellationRequested)
+                    {
+                        await Task.Delay(_options.RedeliverInterval);
+
+                        //first time, we want to read our pending messages, in case we crashed and are recovering.
+                        pendMessages = _redisManager.GetPendingMessagesAsync(_inputQueueName,
+                                consumerGroup, cancellationToken);
+
+                        if (pendMessages == null)
+                        {
+                            continue;
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // TODO
+                }
+            }, cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
             return Task.Factory.StartNew(async () =>
             {
                 try
                 {
-                    //first time, we want to read our pending messages, in case we crashed and are recovering.
-                    var pendingMessages = _redisManager.PollStreamsPendingMessagesAsync(_inputQueueName,
-                        consumerGroup, TimeSpan.FromSeconds(2), cancellationToken);
-                    await WriterAsync(pendingMessages);
-
-
                     while (!cancellationToken.IsCancellationRequested)
                     {
                         var messages = _redisManager
-                            .PollStreamsPendingMessagesAsync(_inputQueueName,
-                                consumerGroup, TimeSpan.FromSeconds(2), cancellationToken);
+                              .GetNewMessagesAsync(_inputQueueName,
+                                  consumerGroup, TimeSpan.FromSeconds(2), cancellationToken);
 
                         await WriterAsync(messages);
                     }
@@ -99,6 +130,11 @@ namespace Rebus.Redis.Transport
                     // TODO
                 }
             }, cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);  
+        }
+
+        private Task ExecPendMessagesInner(IEnumerable<PendingMessage> pendMessages)
+        { 
+            
         }
     }
 }
