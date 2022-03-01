@@ -1,9 +1,4 @@
 ﻿using Rebus.Messages;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Rebus.Redis.Transport
 {
@@ -17,6 +12,20 @@ namespace Rebus.Redis.Transport
             TimeSpan pollDelay, CancellationToken token);
 
         IEnumerable<PendingMessage> GetPendingMessagesAsync(string key, string consumerGroup,
+            CancellationToken token);
+
+        /// <summary>
+        /// Reclaims pending messages
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="consumerGroup"></param>
+        /// <param name="minIdle">Set the idle time (last time it was delivered) of the message.</param>
+        /// <param name="ids"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        IEnumerable<TransportMessage> GetClaimMessagesAsync(string key, string consumerGroup,
+            long minIdle,
+            IEnumerable<string> ids,
             CancellationToken token);
 
         void Ack(string key, string consumerGroup, string messageId);

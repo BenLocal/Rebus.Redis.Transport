@@ -26,7 +26,7 @@ namespace Rebus.Redis.Transport.FreeRedis
             configurer.OtherService<ReidsTransport>().Register(x =>
             {
                 var manager = x.Get<IRedisManager>();
-                return new ReidsTransport(options.QueueName, manager, options);
+                return new ReidsTransport(manager, options);
             });
 
             configurer.Register(x => x.Get<ReidsTransport>());

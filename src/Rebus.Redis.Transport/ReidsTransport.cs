@@ -1,52 +1,45 @@
-﻿using Newtonsoft.Json;
-using Rebus.Config;
-using Rebus.Messages;
+﻿using Rebus.Messages;
 using Rebus.Transport;
-using System;
-using System.Threading;
 using System.Threading.Channels;
 
 namespace Rebus.Redis.Transport
 {
     public class ReidsTransport : AbstractRebusTransport
     {
-        private readonly string _inputQueueName;
         private readonly IRedisManager _redisManager;
         private readonly RedisOptions _options;
 
-        private readonly string consumerGroup = "aaa";
-        private readonly Channel<TransportMessage> _receiveedChannel;
+        private readonly Channel<TransportMessage> _receivedChannel;
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
-        public ReidsTransport(string inputQueueName,
-            IRedisManager redisManager,
-            RedisOptions options) : base(inputQueueName)
+        public ReidsTransport(IRedisManager redisManager,
+            RedisOptions options) : base(options.QueueName)
         {
-            _inputQueueName = inputQueueName;
             _redisManager = redisManager;
             _options = options;
-            _receiveedChannel = Channel.CreateUnbounded<TransportMessage>(new UnboundedChannelOptions() { SingleReader = true, SingleWriter = true });
-
-            Receiving(_cts.Token);
+            _receivedChannel = Channel.CreateUnbounded<TransportMessage>(new UnboundedChannelOptions() { SingleReader = true, SingleWriter = true });
         }
 
         public override void CreateQueue(string address)
         {
-            _redisManager.CreateConsumerGroup(_inputQueueName, consumerGroup);
+            _redisManager.CreateConsumerGroup(_options.QueueName, _options.ConsumerName);
+
+            ReclaimPendingMessagesLoop(_cts.Token);
+            PollNewMessagesLoop(_cts.Token);
         }
 
         public override async Task<TransportMessage> Receive(ITransactionContext context, CancellationToken cancellationToken)
         {
-            if (await _receiveedChannel.Reader.WaitToReadAsync(cancellationToken))
+            if (await _receivedChannel.Reader.WaitToReadAsync(cancellationToken))
             {
-                if (_receiveedChannel.Reader.TryRead(out var message))
+                if (_receivedChannel.Reader.TryRead(out var message))
                 {
                     // ack
                     context.OnCommitted(ctx =>
                     {
                         if (message.Headers.TryGetValue("redis-id", out var id))
                         {
-                            _redisManager.Ack(_inputQueueName, consumerGroup, id);
+                            _redisManager.Ack(_options.QueueName, _options.ConsumerName, id);
                         }
 
                         return Task.CompletedTask;
@@ -62,30 +55,58 @@ namespace Rebus.Redis.Transport
         protected override async Task SendOutgoingMessages(IEnumerable<OutgoingMessage> outgoingMessages, ITransactionContext context)
         {
             var messages = outgoingMessages.Select(x => x.TransportMessage);
-            await _redisManager.PublishAsync(_inputQueueName, messages);
+            await _redisManager.PublishAsync(_options.QueueName, messages);
         }
 
-        private void Receiving(CancellationToken cancellationToken)
+        private Task PollNewMessagesLoop(CancellationToken cancellationToken)
         {
-            // reclaim Pending Messages
-            Task.Factory.StartNew(async () =>
+            return Task.Factory.StartNew(async () =>
             {
                 try
                 {
-                    var pendingMessages = _redisManager.GetPendingMessagesAsync(_inputQueueName,
-                            consumerGroup, cancellationToken);
+                    while (!cancellationToken.IsCancellationRequested)
+                    {
+                        var messages = _redisManager
+                              .GetNewMessagesAsync(_options.QueueName,
+                                  _options.ConsumerName, TimeSpan.FromSeconds(2), cancellationToken);
 
-                    ExecPendingMessagesInner(pendingMessages);
+                        await WriterAsync(messages);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // TODO
+                }
+            }, cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        }
+
+        private Task ReclaimPendingMessagesLoop(CancellationToken cancellationToken)
+        {
+            if (_options.RedeliverInterval == TimeSpan.Zero ||
+                _options.ProcessingTimeout == TimeSpan.Zero )
+            {
+                return Task.CompletedTask;
+            }
+
+
+            return Task.Factory.StartNew(async () =>
+            {
+                try
+                {
+                    var pendingMessages = _redisManager.GetPendingMessagesAsync(_options.QueueName,
+                            _options.ConsumerName, cancellationToken);
+
+                    await ExecPendingMessagesInner(pendingMessages, _options.ConsumerName, cancellationToken);
 
                     while (!cancellationToken.IsCancellationRequested)
                     {
                         await Task.Delay(_options.RedeliverInterval);
 
                         //first time, we want to read our pending messages, in case we crashed and are recovering.
-                        pendingMessages = _redisManager.GetPendingMessagesAsync(_inputQueueName,
-                                consumerGroup, cancellationToken);
+                        pendingMessages = _redisManager.GetPendingMessagesAsync(_options.QueueName,
+                                _options.ConsumerName, cancellationToken);
 
-                        ExecPendingMessagesInner(pendingMessages);
+                        await ExecPendingMessagesInner(pendingMessages, _options.ConsumerName, cancellationToken);
                     }
                 }
                 catch (OperationCanceledException)
@@ -94,47 +115,66 @@ namespace Rebus.Redis.Transport
                 }
             }, cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
-            Task.Factory.StartNew(async () =>
-            {
-                try
-                {
-                    while (!cancellationToken.IsCancellationRequested)
-                    {
-                        var messages = _redisManager
-                              .GetNewMessagesAsync(_inputQueueName,
-                                  consumerGroup, TimeSpan.FromSeconds(2), cancellationToken);
-
-                        await WriterAsync(messages);
-                    }
-
-                    async Task WriterAsync(IEnumerable<TransportMessage> messages)
-                    {
-                        if (messages != null)
-                        {
-                            foreach (var message in messages)
-                            {
-                                await _receiveedChannel.Writer.WriteAsync(message);
-                            }
-                        }
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    // TODO
-                }
-            }, cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);  
         }
 
-        private void ExecPendingMessagesInner(IEnumerable<PendingMessage> pendMessages)
+        private async Task ExecPendingMessagesInner(IEnumerable<PendingMessage> pendingMessages,
+            string consumerGroup,
+            CancellationToken cancellationToken)
         {
-            if (pendMessages == null)
+            if (pendingMessages == null)
             {
                 return;
             }
 
-            foreach (var pend in pendMessages)
+            var ids = new List<string>();
+            foreach (var pending in pendingMessages)
             {
-                Console.WriteLine($"Pending message is : {pend.Id}");
+                // Filter out messages that have not timed out yet
+                if (pending.Idle >= _options.ProcessingTimeout.TotalMilliseconds)
+                {
+                    if (pending.Id != null)
+                    {
+                        ids.Add(pending.Id);
+                    }
+                }
+            }
+
+            if (!ids.Any())
+            {
+                return;
+            }
+
+            try
+            {
+                var claimResult = _redisManager.GetClaimMessagesAsync(_options.QueueName,
+                    consumerGroup,
+                    _options.ProcessingTimeout, ids, cancellationToken);
+
+                if (claimResult == null)
+                { 
+                    return;
+                }
+
+                // Enqueue claimed messages
+                await WriterAsync(claimResult);
+            }
+            catch
+            {
+                // TODO logger
+                return;
+            }
+
+
+        }
+
+        private async Task WriterAsync(IEnumerable<TransportMessage> messages)
+        {
+            if (messages != null)
+            {
+                foreach (var message in messages)
+                {
+                    await _receivedChannel.Writer.WriteAsync(message);
+                }
             }
         }
     }

@@ -37,7 +37,7 @@ namespace Rebus.Redis.Transport.FreeRedis
             {
                 _redisClient.XGroupCreate(key, consumerGroup, "0", MkStream: true);
             }
-            catch (Exception ex)
+            catch (RedisServerException ex)
             {
                 // TODO
                 if (ex.Message.Contains("BUSYGROUP"))
@@ -47,6 +47,36 @@ namespace Rebus.Redis.Transport.FreeRedis
 
                 throw ex;
             }
+        }
+
+        public IEnumerable<TransportMessage> GetClaimMessagesAsync(string key, string consumerGroup,
+            long minIdle,
+            IEnumerable<string> ids,
+            CancellationToken token)
+        {
+            var streamsEntries = _redisClient.XClaim(key, consumerGroup, consumerGroup, minIdle, ids.ToArray());
+
+            if (streamsEntries == null)
+            {
+                yield break;
+            }
+
+            foreach (var streamsEntry in streamsEntries)
+            {
+                if (streamsEntry == null)
+                {
+                    continue;
+                }
+
+                var message = MessageTransform.ToMessage(streamsEntry);
+                if (message == null)
+                {
+                    continue;
+                }
+
+                yield return message;
+            }
+
         }
 
         public IEnumerable<TransportMessage> GetNewMessagesAsync(string key, string consumerGroup, TimeSpan pollDelay, CancellationToken token)
