@@ -11,6 +11,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HelloWord", "example\HelloW
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rebus.Redis.Transport.FreeRedis", "src\Rebus.Redis.Transport.FreeRedis\Rebus.Redis.Transport.FreeRedis.csproj", "{9497CD8D-7179-421B-8463-4129C919CD1C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{75E90A9D-6493-4DE9-941D-12C468D8529E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rebus.Redis.Transport.FreeRedis.Test", "test\Rebus.Redis.Transport.FreeRedis.Test\Rebus.Redis.Transport.FreeRedis.Test.csproj", "{7F34A548-162C-4AF6-AE9A-0CD74B42548F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,12 +33,17 @@ Global
 		{9497CD8D-7179-421B-8463-4129C919CD1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9497CD8D-7179-421B-8463-4129C919CD1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9497CD8D-7179-421B-8463-4129C919CD1C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F34A548-162C-4AF6-AE9A-0CD74B42548F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F34A548-162C-4AF6-AE9A-0CD74B42548F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F34A548-162C-4AF6-AE9A-0CD74B42548F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F34A548-162C-4AF6-AE9A-0CD74B42548F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{7E44B3EE-5FEB-4E23-833A-4D7DC2E6ADF3} = {89C59433-B2D9-4E3A-96D5-DA8E2DD676E6}
+		{7F34A548-162C-4AF6-AE9A-0CD74B42548F} = {75E90A9D-6493-4DE9-941D-12C468D8529E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A5DD5D98-C07E-4C89-9F78-4AFCF2F96F9B}

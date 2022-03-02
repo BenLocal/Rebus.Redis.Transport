@@ -68,7 +68,7 @@ namespace Rebus.Redis.Transport
                     {
                         var messages = _redisManager
                               .GetNewMessagesAsync(_options.QueueName,
-                                  _options.ConsumerName, TimeSpan.FromSeconds(2), cancellationToken);
+                                  _options.ConsumerName, cancellationToken);
 
                         await WriterAsync(messages);
                     }
@@ -148,7 +148,7 @@ namespace Rebus.Redis.Transport
             {
                 var claimResult = _redisManager.GetClaimMessagesAsync(_options.QueueName,
                     consumerGroup,
-                    _options.ProcessingTimeout, ids, cancellationToken);
+                    _options.QueueDepth, ids, cancellationToken);
 
                 if (claimResult == null)
                 { 

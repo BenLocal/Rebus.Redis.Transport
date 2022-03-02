@@ -14,11 +14,6 @@ namespace Rebus.Redis.Transport
         public string ConnectionString { get; set; } = default!;
 
         /// <summary>
-        /// The size of the message count for read redis
-        /// </summary>
-        public int StreamEntriesCount { get; set; } = 10;
-
-        /// <summary>
         /// The topic name
         /// </summary>
         public string QueueName { get; set; } = string.Empty;
@@ -31,7 +26,7 @@ namespace Rebus.Redis.Transport
         /// <summary>
         /// The size of the message queue for processing
         /// </summary>
-        public uint QueueDepth { get; set; }
+        public uint QueueDepth { get; set; } = 10;
 
         /// <summary>
         /// The amount time a message must be pending before attempting to redeliver it (0 disables redelivery)
@@ -42,5 +37,13 @@ namespace Rebus.Redis.Transport
         /// The interval between checking for pending messages to redelivery (0 disables redelivery)
         /// </summary>
         public TimeSpan RedeliverInterval { get; set; } = TimeSpan.FromSeconds(15);
+
+        public QueueType QueueType { get; set; } = QueueType.STREAM;
+    }
+
+    public enum QueueType
+    {
+        STREAM,
+        LIST
     }
 }

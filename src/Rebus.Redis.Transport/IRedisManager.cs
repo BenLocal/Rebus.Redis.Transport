@@ -9,7 +9,7 @@ namespace Rebus.Redis.Transport
         Task PublishAsync(string key, IEnumerable<TransportMessage> messages);
 
         IEnumerable<TransportMessage> GetNewMessagesAsync(string key, string consumerGroup,
-            TimeSpan pollDelay, CancellationToken token);
+            CancellationToken token);
 
         IEnumerable<PendingMessage> GetPendingMessagesAsync(string key, string consumerGroup,
             CancellationToken token);

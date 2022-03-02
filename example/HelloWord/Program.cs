@@ -15,7 +15,7 @@ var bus = Configure.With(activator)
     .Transport(t => t.UseRedisStreamMq(o => {
         o.QueueName = "input";
         o.ConsumerName = "output";
-        o.StreamEntriesCount = 10;
+        o.QueueDepth = 10;
         o.ConnectionString = "127.0.0.1:6379";
     }))
     .Routing(r => r.TypeBased().Map<GuidMessage>("input"))

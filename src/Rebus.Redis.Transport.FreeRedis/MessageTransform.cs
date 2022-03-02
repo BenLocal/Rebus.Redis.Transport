@@ -46,8 +46,13 @@ namespace Rebus.Redis.Transport.FreeRedis
         {
             return new Dictionary<string, string>
             {
-                { "d", JsonConvert.SerializeObject(message) }
+                { "d", AsStringData(message) }
             };
+        }
+
+        public static string AsStringData(TransportMessage message)
+        {
+            return JsonConvert.SerializeObject(message);
         }
     }
 }

@@ -15,13 +15,29 @@ namespace Rebus.Redis.Transport.FreeRedis
             var options = new RedisOptions();
             action.Invoke(options);
 
-            configurer
-                .OtherService<IRedisManager>()
-                .Register(c =>
-                {
-                    return new StreamRedisManager(options);
-                });
 
+            if (options.QueueType == QueueType.STREAM)
+            {
+                configurer
+                    .OtherService<IRedisManager>()
+                    .Register(c =>
+                    {
+                        return new StreamRedisManager(options);
+                    });
+            }
+            else if (options.QueueType == QueueType.LIST)
+            {
+                configurer
+                    .OtherService<IRedisManager>()
+                    .Register(c =>
+                    {
+                        return new QueueRedisManager(options);
+                    });
+            }
+            else
+            {
+                throw new ArgumentException("Options's QueueType is required");
+            }
 
             configurer.OtherService<ReidsTransport>().Register(x =>
             {

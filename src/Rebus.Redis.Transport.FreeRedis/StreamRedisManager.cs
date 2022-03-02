@@ -79,7 +79,7 @@ namespace Rebus.Redis.Transport.FreeRedis
 
         }
 
-        public IEnumerable<TransportMessage> GetNewMessagesAsync(string key, string consumerGroup, TimeSpan pollDelay, CancellationToken token)
+        public IEnumerable<TransportMessage> GetNewMessagesAsync(string key, string consumerGroup, CancellationToken token)
         {
             //If the ID is the special ID > then the command will return only new messages never delivered to other consumers
             //so far, and as a side effect, will update the consumer group's last ID.
@@ -89,8 +89,8 @@ namespace Rebus.Redis.Transport.FreeRedis
             // never acknowledged so far with XACK.
             var streamsEntries = _redisClient.XReadGroup(consumerGroup,
                 consumerGroup,
-                _options.StreamEntriesCount,
-                pollDelay.Seconds,
+                _options.QueueDepth,
+                2,
                 false,
                 key, ">");
 
@@ -128,7 +128,7 @@ namespace Rebus.Redis.Transport.FreeRedis
                     consumerGroup,
                     start: "-",
                     end: "+",
-                    count: _options.StreamEntriesCount,
+                    count: _options.QueueDepth,
                     consumer: consumerGroup);
 
             if (streamsEntries == null)
