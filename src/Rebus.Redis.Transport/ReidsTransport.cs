@@ -82,21 +82,22 @@ namespace Rebus.Redis.Transport
 
         private Task ReclaimPendingMessagesLoop(CancellationToken cancellationToken)
         {
-            if (_options.RedeliverInterval == TimeSpan.Zero ||
-                _options.ProcessingTimeout == TimeSpan.Zero )
-            {
-                return Task.CompletedTask;
-            }
-
-
             return Task.Factory.StartNew(async () =>
             {
                 try
                 {
                     var pendingMessages = _redisManager.GetPendingMessagesAsync(_options.QueueName,
-                            _options.ConsumerName, cancellationToken);
+                        _options.ConsumerName, cancellationToken);
 
                     await ExecPendingMessagesInner(pendingMessages, _options.ConsumerName, cancellationToken);
+
+
+                    if (_options.RedeliverInterval == TimeSpan.Zero ||
+                        _options.ProcessingTimeout == TimeSpan.Zero)
+                    {
+                        return;
+                    }
+
 
                     while (!cancellationToken.IsCancellationRequested)
                     {

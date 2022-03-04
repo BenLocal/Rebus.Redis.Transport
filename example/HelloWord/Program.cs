@@ -4,11 +4,19 @@ using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Routing.TypeBased;
 using Rebus.Redis.Transport.FreeRedis;
+using Rebus.Retry.Simple;
+using Rebus.Bus;
+using Rebus.Exceptions;
+using Rebus.Messages;
+using Rebus.Persistence.InMem;
 
 using var activator = new BuiltinHandlerActivator();
 using var timer = new System.Timers.Timer();
 
-activator.Register(() => new PrintGuid());
+activator.Register((bus, ctx) =>
+{
+    return new PrintGuid(bus);
+});
 
 var bus = Configure.With(activator)
     .Logging(l => l.Trace())
@@ -17,8 +25,11 @@ var bus = Configure.With(activator)
         o.ConsumerName = "output";
         o.QueueDepth = 10;
         o.ConnectionString = "127.0.0.1:6379";
+        o.QueueType = Rebus.Redis.Transport.QueueType.LIST;
     }))
+    .Subscriptions(s => s.StoreInMemory())
     .Routing(r => r.TypeBased().Map<GuidMessage>("input"))
+    .Options(b => b.SimpleRetryStrategy(secondLevelRetriesEnabled: true))
     .Start();
 
 timer.Elapsed += delegate {
@@ -28,7 +39,9 @@ timer.Elapsed += delegate {
 
     var id = Guid.NewGuid().ToString("N");
     Console.WriteLine("Send message: {0}", id);
+    //bus.Send(new GuidMessage(id)).Wait();
     bus.Send(new GuidMessage(id)).Wait();
+    //bus.Reply(new GuidMessage(id)).Wait();
 
 };
 timer.Interval = 1000;
@@ -69,12 +82,30 @@ class PrintDateTime : IHandleMessages<CurrentTimeMessage>
     }
 }
 
-class PrintGuid : IHandleMessages<GuidMessage>
+class PrintGuid : IHandleMessages<GuidMessage>, IHandleMessages<IFailed<GuidMessage>>
 {
-    public Task Handle(GuidMessage message)
+    readonly IBus _bus;
+
+    public PrintGuid(IBus bus)
+    {
+        _bus = bus;
+    }
+
+    public async Task Handle(GuidMessage message)
     {
         Console.WriteLine($"Receive the guid is {message.TextA}");
+        //await Task.Delay(2000);
+    }
 
-        return Task.CompletedTask;
+    public async Task Handle(IFailed<GuidMessage> message)
+    {
+        const int maxDeferCount = 5;
+        var deferCount = Convert.ToInt32(message.Headers.GetValueOrDefault(Headers.DeferCount));
+        if (deferCount >= maxDeferCount)
+        {
+            await _bus.Advanced.TransportMessage.Deadletter($"Failed after {deferCount} deferrals\n\n{message.ErrorDescription}");
+            return;
+        }
+        await _bus.Advanced.TransportMessage.Defer(TimeSpan.FromSeconds(30));
     }
 }

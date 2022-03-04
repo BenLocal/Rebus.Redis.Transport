@@ -39,7 +39,6 @@ namespace Rebus.Redis.Transport.FreeRedis
             }
             catch (RedisServerException ex)
             {
-                // TODO
                 if (ex.Message.Contains("BUSYGROUP"))
                 {
                     return;

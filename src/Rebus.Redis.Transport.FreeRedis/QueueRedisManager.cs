@@ -21,7 +21,7 @@ namespace Rebus.Redis.Transport.FreeRedis
             var pendingMapKey = $"{key}:{consumerGroup}";
             _redisClient.HDel(pendingMapKey, messageId);
 
-            _redisClient.Eval(@"redis.call('HDEL', KEYS[2], KEYS[1]..':'..KEYS[3])
+            _redisClient.Eval(@"redis.call('HDEL', KEYS[2], KEYS[3])
 redis.call('DEL', KEYS[1]..':'..KEYS[3])", new string[] { key, pendingMapKey, messageId });
         }
 
@@ -74,6 +74,7 @@ return vals", new string[] { key, pendingMapKey }, new object[] { _options.Queue
                     if (item is object[] messages && messages.Length == 2)
                     {
                         var message = JsonConvert.DeserializeObject<TransportMessage>(messages[1].ToString());
+                        
                         yield return message;
                     }
                 }
@@ -89,6 +90,7 @@ return vals", new string[] { key, pendingMapKey }, new object[] { _options.Queue
             return keys.Select(x => new PendingMessage()
             {
                 Id = x.Key,
+                Idle = Convert.ToInt32(_options.ProcessingTimeout.TotalMilliseconds)
             });
         }
 
@@ -98,7 +100,6 @@ return vals", new string[] { key, pendingMapKey }, new object[] { _options.Queue
             {
                 var messageId = Guid.NewGuid().ToString("N");
                 message.Headers?.Add("redis-id", messageId);
-
                 _redisClient.Eval(@"redis.call('SET', KEYS[1]..':'..ARGV[1], ARGV[2])
 redis.call('LPUSH', KEYS[1], ARGV[1])", new string[] { key }, new object[] { messageId, MessageTransform.AsStringData(message) });
             }
