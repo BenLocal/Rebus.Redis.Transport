@@ -11,12 +11,12 @@ namespace Rebus.Redis.Transport
         /// <summary>
         /// message was delivered to this consumer.
         /// </summary>
-        public string? Id { get; set; }
+        public string Id { get; set; }
 
         /// <summary>
         /// message was delivered to this consumer. message was delivered to this consumer.
         /// </summary>
-        public string? Consumer { get; set; }
+        public string Consumer { get; set; }
 
         /// <summary>
         /// The number of milliseconds that elapsed since the last time this message was delivered to this consumer.

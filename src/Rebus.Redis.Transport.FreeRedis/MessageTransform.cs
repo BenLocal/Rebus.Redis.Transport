@@ -11,7 +11,7 @@ namespace Rebus.Redis.Transport.FreeRedis
 {
     internal static class MessageTransform
     {
-        public static TransportMessage? ToMessage(StreamsEntry streamEntry)
+        public static TransportMessage ToMessage(StreamsEntry streamEntry)
         {
             if (streamEntry?.fieldValues == null)
             {
