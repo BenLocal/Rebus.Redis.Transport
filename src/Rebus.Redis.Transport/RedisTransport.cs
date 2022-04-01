@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Rebus.Redis.Transport
 {
-    public class ReidsTransport : AbstractRebusTransport
+    public class RedisTransport : AbstractRebusTransport
     {
         private readonly IRedisManager _redisManager;
         private readonly RedisOptions _options;
@@ -17,7 +17,7 @@ namespace Rebus.Redis.Transport
         private readonly Channel<TransportMessage> _receivedChannel;
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
-        public ReidsTransport(IRedisManager redisManager,
+        public RedisTransport(IRedisManager redisManager,
             RedisOptions options) : base(options.QueueName)
         {
             _redisManager = redisManager;

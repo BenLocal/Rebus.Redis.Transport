@@ -39,13 +39,13 @@ namespace Rebus.Redis.Transport.FreeRedis
                 throw new ArgumentException("Options's QueueType is required");
             }
 
-            configurer.OtherService<ReidsTransport>().Register(x =>
+            configurer.OtherService<RedisTransport>().Register(x =>
             {
                 var manager = x.Get<IRedisManager>();
-                return new ReidsTransport(manager, options);
+                return new RedisTransport(manager, options);
             });
 
-            configurer.Register(x => x.Get<ReidsTransport>());
+            configurer.Register(x => x.Get<RedisTransport>());
         }
     }
 }
