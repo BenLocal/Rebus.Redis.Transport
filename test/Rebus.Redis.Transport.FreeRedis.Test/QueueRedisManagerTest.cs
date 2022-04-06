@@ -105,6 +105,7 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
 
             var getMessages = _manager.GetNewMessagesAsync(_options.QueueName,
                 _options.ConsumerName,
+                (int)_options.QueueDepth,
                 default);
 
             var count = 0;
@@ -132,8 +133,7 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
             foreach (var message in outMessages)
             {
                 // ack
-                var res = message.Headers.TryGetValue("redis-id", out var messageId);
-                Assert.IsTrue(res);
+                var messageId = _manager.GetIdByTransportMessage(message);
                 Assert.IsNotNull(messageId);
 
                 _manager.Ack(_options.QueueName, _options.ConsumerName, messageId);
@@ -144,8 +144,7 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
 
             foreach (var message in outMessages)
             {
-                var res = message.Headers.TryGetValue("redis-id", out var messageId);
-                Assert.IsTrue(res);
+                var messageId = _manager.GetIdByTransportMessage(message);
                 Assert.IsNotNull(messageId);
 
                 var exists = _redisClient.Exists($"{_options.QueueName}:{messageId}");
@@ -177,6 +176,7 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
 
             var getMessages = _manager.GetNewMessagesAsync(_options.QueueName,
                 _options.ConsumerName,
+                (int)_options.QueueDepth,
                 default);
 
             var count = 0;
@@ -196,8 +196,7 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
             foreach (var message in outMessages)
             {
                 // ack
-                var res = message.Headers.TryGetValue("redis-id", out var messageId);
-                Assert.IsTrue(res);
+                var messageId = _manager.GetIdByTransportMessage(message);
                 Assert.IsNotNull(messageId);
 
                 _manager.Ack(_options.QueueName, _options.ConsumerName, messageId);

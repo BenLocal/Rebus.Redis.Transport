@@ -11,8 +11,10 @@ namespace Rebus.Redis.Transport.FreeRedis
 {
     internal static class MessageTransform
     {
-        public static TransportMessage ToMessage(StreamsEntry streamEntry)
+        public static TransportMessage ToMessage(StreamsEntry streamEntry, out string messageId)
         {
+            messageId = null;
+
             if (streamEntry?.fieldValues == null)
             {
                 return null;
@@ -36,9 +38,6 @@ namespace Rebus.Redis.Transport.FreeRedis
             }
 
             var message = JsonConvert.DeserializeObject<TransportMessage>(str);
-
-            message.Headers?.Add("redis-id", streamEntry.id);
-
             return message;
         }
 

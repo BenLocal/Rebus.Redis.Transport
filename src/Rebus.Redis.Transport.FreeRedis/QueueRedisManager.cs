@@ -52,7 +52,9 @@ redis.call('DEL', KEYS[1]..':'..KEYS[3])", new string[] { key, pendingMapKey, me
             }
         }
 
-        public IEnumerable<TransportMessage> GetNewMessagesAsync(string key, string consumerGroup, CancellationToken token)
+        public IEnumerable<TransportMessage> GetNewMessagesAsync(string key, string consumerGroup,
+            int count,
+            CancellationToken token)
         {
             var pendingMapKey = $"{key}:{consumerGroup}";
             // Redis version >= 6.2.0: Added the `count` argument.
@@ -69,7 +71,7 @@ do
     end
     i = i + 1
 end
-return vals", new string[] { key, pendingMapKey }, new object[] { _options.QueueDepth });
+return vals", new string[] { key, pendingMapKey }, new object[] { count });
 
             if (result is object[] vals)
             {
@@ -102,13 +104,23 @@ return vals", new string[] { key, pendingMapKey }, new object[] { _options.Queue
         {
             foreach (var message in messages)
             {
-                var messageId = Guid.NewGuid().ToString("N");
-                message.Headers?.Add("redis-id", messageId);
+                var messageId = GetIdByTransportMessage(message);
+                if (string.IsNullOrEmpty(messageId))
+                {
+                    messageId = Guid.NewGuid().ToString("N");
+                    message.Headers.TryAdd(Headers.MessageId, messageId);
+                }
+
                 _redisClient.Eval(@"redis.call('SET', KEYS[1]..':'..ARGV[1], ARGV[2])
 redis.call('LPUSH', KEYS[1], ARGV[1])", new string[] { key }, new object[] { messageId, MessageTransform.AsStringData(message) });
             }
 
             return Task.CompletedTask;
+        }
+
+        public string GetIdByTransportMessage(TransportMessage message)
+        {
+            return message.Headers.GetValueOrDefault(Headers.MessageId);
         }
     }
 }

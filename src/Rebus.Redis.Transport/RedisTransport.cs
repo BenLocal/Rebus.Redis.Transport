@@ -42,10 +42,13 @@ namespace Rebus.Redis.Transport
                     // ack
                     context.OnCommitted(ctx =>
                     {
-                        if (message.Headers.TryGetValue("redis-id", out var id))
+                        var id = _redisManager.GetIdByTransportMessage(message);
+                        if (string.IsNullOrWhiteSpace(id))
                         {
-                            _redisManager.Ack(_options.QueueName, _options.ConsumerName, id);
+                            return Task.CompletedTask;
                         }
+
+                        _redisManager.Ack(_options.QueueName, _options.ConsumerName, id);
 
                         return Task.CompletedTask;
                     });
@@ -73,7 +76,9 @@ namespace Rebus.Redis.Transport
                     {
                         var messages = _redisManager
                               .GetNewMessagesAsync(_options.QueueName,
-                                  _options.ConsumerName, cancellationToken);
+                                  _options.ConsumerName,
+                                  (int)_options.QueueDepth,
+                                  cancellationToken);
 
                         await WriterAsync(messages);
                     }
