@@ -8,6 +8,6 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
 {
     internal static class RedisCommon
     {
-        public const string ConnectionString = "127.0.0.1:6379";
+        public const string ConnectionString = "192.168.1.11:6389";
     }
 }

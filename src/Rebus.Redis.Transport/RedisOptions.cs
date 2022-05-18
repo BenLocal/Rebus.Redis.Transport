@@ -26,7 +26,7 @@ namespace Rebus.Redis.Transport
         /// <summary>
         /// The size of the message queue for processing
         /// </summary>
-        public uint QueueDepth { get; set; } = 10;
+        public uint QueueDepth { get; set; } = 1;
 
         /// <summary>
         /// The amount time a message must be pending before attempting to redeliver it (0 disables redelivery)
@@ -43,7 +43,7 @@ namespace Rebus.Redis.Transport
 
     public enum QueueType
     {
-        STREAM,
-        LIST
+        LIST,
+        STREAM
     }
 }

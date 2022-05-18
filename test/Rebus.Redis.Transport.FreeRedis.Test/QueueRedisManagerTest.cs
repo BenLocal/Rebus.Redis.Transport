@@ -1,22 +1,20 @@
 using FreeRedis;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
-using Rebus.Config;
+using NUnit.Framework;
 using Rebus.Messages;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Rebus.Redis.Transport.FreeRedis.Test
 {
-    [TestClass]
     public class QueueRedisManagerTest
     {
         private QueueRedisManager _manager = default!;
         private RedisClient _redisClient = default!;
         private RedisOptions _options = default!;
 
-        [TestInitialize]
-        public void Initialize()
+        [SetUp]
+        public void Setup()
         {
             _options = new RedisOptions()
             {
@@ -32,7 +30,7 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
             Cleanup();
         }
 
-        [TestCleanup]
+        [TearDown]
         public void Cleanup()
         {
             var len = _redisClient.LLen(_options.QueueName);
@@ -47,7 +45,7 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
 
         }
 
-        [TestMethod]
+        [Test]
         public void TestPublishAsyncSuccess()
         {
             var messages = new List<TransportMessage>()
@@ -73,7 +71,7 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
             var results = _redisClient.LRange(_options.QueueName, 0, length);
             Assert.AreEqual(length, results.Count());
 
-            for (var i = 0; i< results.Length; i++)
+            for (var i = 0; i < results.Length; i++)
             {
                 var msgID = results[i];
                 var str = _redisClient.Get($"{_options.QueueName}:{msgID}");
@@ -83,7 +81,7 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
 
         }
 
-        [TestMethod]
+        [Test]
         public void TestNewMessagesSuccess()
         {
             var messages = new List<TransportMessage>()
@@ -105,7 +103,6 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
 
             var getMessages = _manager.GetNewMessagesAsync(_options.QueueName,
                 _options.ConsumerName,
-                (int)_options.QueueDepth,
                 default);
 
             var count = 0;
@@ -133,7 +130,8 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
             foreach (var message in outMessages)
             {
                 // ack
-                var messageId = _manager.GetIdByTransportMessage(message);
+                var res = message.Headers.TryGetValue("redis-id", out var messageId);
+                Assert.IsTrue(res);
                 Assert.IsNotNull(messageId);
 
                 _manager.Ack(_options.QueueName, _options.ConsumerName, messageId);
@@ -144,7 +142,8 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
 
             foreach (var message in outMessages)
             {
-                var messageId = _manager.GetIdByTransportMessage(message);
+                var res = message.Headers.TryGetValue("redis-id", out var messageId);
+                Assert.IsTrue(res);
                 Assert.IsNotNull(messageId);
 
                 var exists = _redisClient.Exists($"{_options.QueueName}:{messageId}");
@@ -154,7 +153,7 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
             Assert.AreEqual(messages.Count, count);
         }
 
-        [TestMethod]
+        [Test]
         public void TestPendingMessagesSuccess()
         {
             var messages = new List<TransportMessage>()
@@ -176,7 +175,6 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
 
             var getMessages = _manager.GetNewMessagesAsync(_options.QueueName,
                 _options.ConsumerName,
-                (int)_options.QueueDepth,
                 default);
 
             var count = 0;
@@ -196,7 +194,8 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
             foreach (var message in outMessages)
             {
                 // ack
-                var messageId = _manager.GetIdByTransportMessage(message);
+                var res = message.Headers.TryGetValue("redis-id", out var messageId);
+                Assert.IsTrue(res);
                 Assert.IsNotNull(messageId);
 
                 _manager.Ack(_options.QueueName, _options.ConsumerName, messageId);

@@ -52,9 +52,7 @@ redis.call('DEL', KEYS[1]..':'..KEYS[3])", new string[] { key, pendingMapKey, me
             }
         }
 
-        public IEnumerable<TransportMessage> GetNewMessagesAsync(string key, string consumerGroup,
-            int count,
-            CancellationToken token)
+        public IEnumerable<TransportMessage> GetNewMessagesAsync(string key, string consumerGroup, CancellationToken token)
         {
             var pendingMapKey = $"{key}:{consumerGroup}";
             // Redis version >= 6.2.0: Added the `count` argument.
@@ -66,12 +64,14 @@ do
         return vals
     else
         local message = redis.call('GET', KEYS[1]..':'..message_id)
-        redis.call('HSET', KEYS[2], message_id, '')
-        vals[i] = {message_id,message}
+        if message then
+            redis.call('HSET', KEYS[2], message_id, '')
+            vals[i] = {message_id,message}
+        end
+        i = i + 1
     end
-    i = i + 1
 end
-return vals", new string[] { key, pendingMapKey }, new object[] { count });
+return vals", new string[] { key, pendingMapKey }, new object[] { _options.QueueDepth });
 
             if (result is object[] vals)
             {
@@ -96,31 +96,36 @@ return vals", new string[] { key, pendingMapKey }, new object[] { count });
             return keys.Select(x => new PendingMessage()
             {
                 Id = x.Key,
-                Idle = Convert.ToInt32(_options.ProcessingTimeout.TotalMilliseconds)
+                Idle = Convert.ToInt64(_options.ProcessingTimeout.TotalMilliseconds)
             });
         }
+
+        
 
         public Task PublishAsync(string key, IEnumerable<TransportMessage> messages)
         {
             foreach (var message in messages)
             {
-                var messageId = GetIdByTransportMessage(message);
-                if (string.IsNullOrEmpty(messageId))
+                if (message.Headers == null)
                 {
-                    messageId = Guid.NewGuid().ToString("N");
-                    message.Headers.TryAdd(Headers.MessageId, messageId);
+                    continue;
                 }
 
-                _redisClient.Eval(@"redis.call('SET', KEYS[1]..':'..ARGV[1], ARGV[2])
-redis.call('LPUSH', KEYS[1], ARGV[1])", new string[] { key }, new object[] { messageId, MessageTransform.AsStringData(message) });
+                if (!message.Headers.TryGetValue(Headers.MessageId, out var messageId))
+                {
+                    messageId = Guid.NewGuid().ToString("N");
+                }
+
+                // set redis id
+                message.Headers[RedisConsts.Headers_RedisId] = messageId;
+
+                _redisClient.Eval(@"redis.call('LPUSH', KEYS[1], KEYS[2])
+redis.call('SET', KEYS[1]..':'..KEYS[2], ARGV[1])
+redis.call('EXPIRE', KEYS[1]..':'..KEYS[2], 86400)
+", new string[] { key, messageId }, new object[] { MessageTransform.AsStringData(message) });
             }
 
             return Task.CompletedTask;
-        }
-
-        public string GetIdByTransportMessage(TransportMessage message)
-        {
-            return message.Headers.GetValueOrDefault(Headers.MessageId);
         }
     }
 }

@@ -12,7 +12,6 @@ namespace Rebus.Redis.Transport
         Task PublishAsync(string key, IEnumerable<TransportMessage> messages);
 
         IEnumerable<TransportMessage> GetNewMessagesAsync(string key, string consumerGroup,
-            int count,
             CancellationToken token);
 
         IEnumerable<PendingMessage> GetPendingMessagesAsync(string key, string consumerGroup,
@@ -33,7 +32,5 @@ namespace Rebus.Redis.Transport
             CancellationToken token);
 
         void Ack(string key, string consumerGroup, string messageId);
-
-        string GetIdByTransportMessage(TransportMessage message);
     }
 }

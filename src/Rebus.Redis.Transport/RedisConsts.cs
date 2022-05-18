@@ -4,8 +4,8 @@ using System.Text;
 
 namespace Rebus.Redis.Transport
 {
-    public static class RedisHeaderConsts
+    public static class RedisConsts
     {
-        public const string RedisStreamMessageId = "redis-msg-id";
+        public const string Headers_RedisId = "redis-id";
     }
 }

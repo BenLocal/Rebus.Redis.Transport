@@ -1,34 +1,51 @@
 ﻿using FreeRedis;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Rebus.Config;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Rebus.Redis.Transport.FreeRedis.Test
 {
-    [TestClass]
     public class RedisLuaTest
     {
         private RedisClient _redisClient = default!;
 
-
-        [TestInitialize]
+        [SetUp]
         public void Initialize()
         {
             _redisClient = new RedisClient(RedisCommon.ConnectionString);
         }
 
-        [TestCleanup]
+        private string Get_Script = @"local vals, i = {}, 1
+while (i <= tonumber(ARGV[1]))
+do
+    local message_id = redis.call('RPOP', KEYS[1])
+    if (message_id == false) then
+        return vals
+    else
+        local message = redis.call('GET', KEYS[1]..':'..message_id)
+        if message then
+            redis.call('HSET', KEYS[2], message_id, '')
+            vals[i] = {message_id,message}
+            i = i + 1
+        end
+    end
+end
+return vals";
+
+        private string Set_Script = @"redis.call('SET', KEYS[1]..':'..ARGV[1], ARGV[2])
+redis.call('EXPIRE', KEYS[1]..':'..ARGV[1], 86400)
+redis.call('LPUSH', KEYS[1], ARGV[1])";
+
+        private string Set_Script_Error = @"redis.call('LPUSH', KEYS[1], ARGV[1])";
+
+        [TearDown]
         public void Cleanup()
         {
             // warning!!!!!!
             _redisClient.FlushDb();
         }
 
-        [TestMethod]
+        [Test]
         public void AddListTest()
         {
             var key = "RedisLuaTest:AddListTest";
@@ -39,12 +56,34 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
 
             for (var i = 0; i < 10; i++)
             { 
-                var val = _redisClient.Get(list[i]);
+                var val = _redisClient.Get($"{key}:{list[i]}");
                 Assert.AreEqual($"{i}", val);
             }
         }
 
-        [TestMethod]
+        [Test]
+        public void RPOPList_Error()
+        {
+            var key = "RedisLuaTest:RPOPList";
+            var pendingMapKey = "RedisLuaTest:pending";
+
+            var keys = AddListInnerError(key, 2);
+
+            // Redis version >= 6.2.0: Added the `count` argument.
+            var result = _redisClient.Eval(Get_Script, new string[] { key, pendingMapKey }, new object[] { 5 });
+            if (result is object[] res)
+            {
+                Assert.AreEqual(res.Length, 0);
+            }
+            else
+            {
+                Assert.Fail();
+            }
+
+            Console.WriteLine(result);
+        }
+
+        [Test]
         public void RPOPList()
         {
             var key = "RedisLuaTest:RPOPList";
@@ -53,20 +92,16 @@ namespace Rebus.Redis.Transport.FreeRedis.Test
             var keys = AddListInner(key, 2);
 
             // Redis version >= 6.2.0: Added the `count` argument.
-            var result = _redisClient.Eval(@"local vals, i = {}, 1
-while (i <= tonumber(ARGV[1]))
-do
-    local message_id = redis.call('RPOP', KEYS[1])
-    if (message_id == false) then
-        return vals
-    else
-        local message = redis.call('GET', message_id)
-        redis.call('HSET', KEYS[2], message_id, '')
-        vals[i] = {message_id,message}
-    end
-    i = i + 1
-end
-return vals", new string[] { key, pendingMapKey }, new object[] { 5 });
+            var result = _redisClient.Eval(Get_Script, new string[] { key, pendingMapKey }, new object[] { 5 });
+
+            if (result is object[] res)
+            {
+                Assert.AreEqual(res.Length, 2);
+            }
+            else
+            {
+                Assert.Fail();
+            }
 
             Console.WriteLine(result);
         }
@@ -79,9 +114,23 @@ return vals", new string[] { key, pendingMapKey }, new object[] { 5 });
                 var messageId = Guid.NewGuid().ToString("N");
 
                 list.Add(messageId);
-                _redisClient.Eval(@"
-redis.call('SET', ARGV[1], ARGV[2])
-redis.call('LPUSH', KEYS[1], ARGV[1])", new string[] { key },
+                _redisClient.Eval(Set_Script, new string[] { key },
+        new object[] { messageId, $"{i}" });
+
+            }
+
+            return list;
+        }
+
+        private List<string> AddListInnerError(string key, int count)
+        {
+            var list = new List<string>();
+            for (var i = 0; i < count; i++)
+            {
+                var messageId = Guid.NewGuid().ToString("N");
+
+                list.Add(messageId);
+                _redisClient.Eval(Set_Script_Error, new string[] { key },
         new object[] { messageId, $"{i}" });
 
             }

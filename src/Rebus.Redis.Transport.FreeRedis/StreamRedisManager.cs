@@ -71,7 +71,7 @@ namespace Rebus.Redis.Transport.FreeRedis
                     continue;
                 }
 
-                var message = CreateTransportMessage(streamsEntry);
+                var message = MessageTransform.ToMessage(streamsEntry);
                 if (message == null)
                 {
                     continue;
@@ -82,9 +82,7 @@ namespace Rebus.Redis.Transport.FreeRedis
 
         }
 
-        public IEnumerable<TransportMessage> GetNewMessagesAsync(string key, string consumerGroup,
-            int count,
-            CancellationToken token)
+        public IEnumerable<TransportMessage> GetNewMessagesAsync(string key, string consumerGroup, CancellationToken token)
         {
             //If the ID is the special ID > then the command will return only new messages never delivered to other consumers
             //so far, and as a side effect, will update the consumer group's last ID.
@@ -94,7 +92,7 @@ namespace Rebus.Redis.Transport.FreeRedis
             // never acknowledged so far with XACK.
             var streamsEntries = _redisClient.XReadGroup(consumerGroup,
                 consumerGroup,
-                count,
+                _options.QueueDepth,
                 2,
                 false,
                 key, ">");
@@ -113,7 +111,7 @@ namespace Rebus.Redis.Transport.FreeRedis
 
                 foreach (var item in streamsEntry.entries)
                 {
-                    var message = CreateTransportMessage(item);
+                    var message = MessageTransform.ToMessage(item);
                     if (message == null)
                     {
                         continue;
@@ -160,19 +158,6 @@ namespace Rebus.Redis.Transport.FreeRedis
                 _redisClient.XAdd(key, MessageTransform.AsData(msg));
             }
             return Task.CompletedTask;
-        }
-
-        public string GetIdByTransportMessage(TransportMessage message)
-        {
-            return message.Headers.GetValueOrDefault(RedisHeaderConsts.RedisStreamMessageId);
-        }
-
-        private TransportMessage CreateTransportMessage(StreamsEntry streamsEntry)
-        {
-            var message = MessageTransform.ToMessage(streamsEntry, out var id);
-            message.Headers.TryAdd(RedisHeaderConsts.RedisStreamMessageId, id);
-
-            return message;
         }
     }
 }
